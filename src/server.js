@@ -40,6 +40,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Root endpoint for browser testing
+app.get('/', (req, res) => {
+  res.send('<h1>ShareMyMeal Backend is Running successfully! 🚀</h1><p>The API endpoints are located at <code>/api</code>.</p>');
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
