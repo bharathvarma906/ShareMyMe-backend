@@ -2,7 +2,7 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const connectDB = require('./config/db');
+const { connectDB, connectionState } = require('./config/db');
 
 // Route imports
 const authRoutes = require('./routes/authRoutes');
@@ -65,6 +65,9 @@ app.get('/api/health', (req, res) => {
     message: 'ShareMyMeal Backend API is active and healthy!',
     timestamp: new Date().toISOString(),
     database: dbStatusMap[dbState] || 'unknown',
+    databaseError: connectionState.error,
+    mongoUriConfigured: connectionState.uriConfigured,
+    maskedMongoUri: connectionState.maskedUri,
     uptime: Math.floor(process.uptime()),
     environment: process.env.NODE_ENV || 'production',
   });
@@ -75,13 +78,24 @@ app.get('/', (req, res) => {
   res.send('<h1>ShareMyMeal Backend is Running successfully! 🚀</h1><p>The API endpoints are located at <code>/api</code>. Check health at <code>/api/health</code>.</p>');
 });
 
+// Database readiness check: prevents obscure 10-second buffering timeout
+const dbReadyCheck = (req, res, next) => {
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: `Database connection unavailable: ${connectionState.error || 'Connecting...'}. Ensure MONGO_URI is set on Render and Atlas Network Access allows 0.0.0.0/0.`,
+    });
+  }
+  next();
+};
+
 // API Routes (supports both /api/* and direct /* paths for maximum resilience)
-app.use(['/api/auth', '/auth'], authRoutes);
-app.use(['/api/donations', '/donations'], donationRoutes);
-app.use(['/api/assignments', '/assignments'], assignmentRoutes);
-app.use(['/api/notifications', '/notifications'], notificationRoutes);
-app.use(['/api/distribution', '/distribution'], distributionRoutes);
-app.use(['/api/analytics', '/analytics'], analyticsRoutes);
+app.use(['/api/auth', '/auth'], dbReadyCheck, authRoutes);
+app.use(['/api/donations', '/donations'], dbReadyCheck, donationRoutes);
+app.use(['/api/assignments', '/assignments'], dbReadyCheck, assignmentRoutes);
+app.use(['/api/notifications', '/notifications'], dbReadyCheck, notificationRoutes);
+app.use(['/api/distribution', '/distribution'], dbReadyCheck, distributionRoutes);
+app.use(['/api/analytics', '/analytics'], dbReadyCheck, analyticsRoutes);
 
 // Catch 404
 app.use((req, res) => {
