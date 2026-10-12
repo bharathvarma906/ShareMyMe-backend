@@ -111,8 +111,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Render dynamically provides PORT (or fallback to 8080)
-const PORT = process.env.PORT || 8080;
+// PORT is always injected by Render in production. Fallback only used for local dev.
+const PORT = process.env.PORT || 3000;
 const HOST = '0.0.0.0';
 
 const server = app.listen(PORT, HOST, () => {

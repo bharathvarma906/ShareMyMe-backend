@@ -23,8 +23,8 @@ RUN chown -R node:node /app
 # Use non-root user
 USER node
 
-# Expose default port (Render sets $PORT dynamically, but EXPOSE documents default)
-EXPOSE 8080
+# Render injects PORT dynamically at runtime; EXPOSE is documentation only
+EXPOSE 10000
 
 # Start backend server
 CMD ["node", "src/server.js"]
