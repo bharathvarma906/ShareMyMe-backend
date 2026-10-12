@@ -97,8 +97,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Render dynamically provides PORT (typically 10000)
-const PORT = process.env.PORT || 5000;
+// Render dynamically provides PORT (or fallback to 8080)
+const PORT = process.env.PORT || 8080;
 const HOST = '0.0.0.0';
 
 const server = app.listen(PORT, HOST, () => {

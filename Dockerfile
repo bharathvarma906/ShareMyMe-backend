@@ -24,7 +24,7 @@ RUN chown -R node:node /app
 USER node
 
 # Expose default port (Render sets $PORT dynamically, but EXPOSE documents default)
-EXPOSE 5000
+EXPOSE 8080
 
 # Start backend server
 CMD ["node", "src/server.js"]
