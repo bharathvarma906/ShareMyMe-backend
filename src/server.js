@@ -118,6 +118,21 @@ const HOST = '0.0.0.0';
 const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on http://${HOST}:${PORT}`);
   console.log(`🔗 Health check: http://${HOST}:${PORT}/api/health`);
+
+  // Keep-alive self-ping: prevents Render free tier from sleeping after 15 min of inactivity
+  // Pings /api/health every 14 minutes to keep the container warm for all visitors
+  if (process.env.NODE_ENV === 'production') {
+    const http = require('http');
+    const PING_INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
+    setInterval(() => {
+      http.get(`http://${HOST}:${PORT}/api/health`, (res) => {
+        console.log(`🏓 Keep-alive ping: HTTP ${res.statusCode}`);
+      }).on('error', (err) => {
+        console.error(`⚠️  Keep-alive ping failed: ${err.message}`);
+      });
+    }, PING_INTERVAL_MS);
+    console.log('⏱️  Keep-alive pinger active (every 14 min)');
+  }
 });
 
 // Graceful shutdown handling for container stops and restarts
