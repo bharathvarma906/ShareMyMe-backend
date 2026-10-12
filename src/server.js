@@ -75,13 +75,13 @@ app.get('/', (req, res) => {
   res.send('<h1>ShareMyMeal Backend is Running successfully! 🚀</h1><p>The API endpoints are located at <code>/api</code>. Check health at <code>/api/health</code>.</p>');
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/donations', donationRoutes);
-app.use('/api/assignments', assignmentRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/distribution', distributionRoutes);
-app.use('/api/analytics', analyticsRoutes);
+// API Routes (supports both /api/* and direct /* paths for maximum resilience)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/donations', '/donations'], donationRoutes);
+app.use(['/api/assignments', '/assignments'], assignmentRoutes);
+app.use(['/api/notifications', '/notifications'], notificationRoutes);
+app.use(['/api/distribution', '/distribution'], distributionRoutes);
+app.use(['/api/analytics', '/analytics'], analyticsRoutes);
 
 // Catch 404
 app.use((req, res) => {
