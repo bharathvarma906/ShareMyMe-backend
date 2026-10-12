@@ -1,0 +1,25 @@
+# Ignore local dependencies (they will be installed inside the container)
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignore environment files containing local secrets
+.env
+.env.local
+.env.*.local
+
+# Ignore git metadata
+.git
+.gitignore
+
+# Ignore build artifacts & unnecessary files
+.dockerignore
+Dockerfile
+render.yaml
+README.md
+migrate.js
+
+# OS files
+.DS_Store
+Thumbs.db

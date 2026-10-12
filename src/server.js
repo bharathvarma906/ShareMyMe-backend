@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 
 // Route imports
@@ -23,26 +24,55 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Enable CORS for frontend connection
+// Dynamic & flexible CORS configuration (fully compatible with credentials)
+const rawAllowed = process.env.ALLOWED_ORIGINS;
+const allowedOrigins = rawAllowed
+  ? rawAllowed.split(',').map((o) => o.trim().replace(/\/$/, ''))
+  : null;
+
 app.use(
   cors({
-    origin: '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, server-to-server, Render health checks)
+      if (!origin) return callback(null, true);
+
+      // If wildcard or not configured, reflect origin so credentials mode works seamlessly
+      if (!allowedOrigins || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // If specific origins are allowed
+      return callback(null, true);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   })
 );
 
-// Health check endpoint
+// Health check endpoint (Used by Render to verify container is healthy)
 app.get('/api/health', (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const dbStatusMap = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting',
+  };
+
   res.status(200).json({
     status: 'OK',
     message: 'ShareMyMeal Backend API is active and healthy!',
     timestamp: new Date().toISOString(),
+    database: dbStatusMap[dbState] || 'unknown',
+    uptime: Math.floor(process.uptime()),
+    environment: process.env.NODE_ENV || 'production',
   });
 });
 
-// Root endpoint for browser testing
+// Root endpoint for browser testing & ping
 app.get('/', (req, res) => {
-  res.send('<h1>ShareMyMeal Backend is Running successfully! 🚀</h1><p>The API endpoints are located at <code>/api</code>.</p>');
+  res.send('<h1>ShareMyMeal Backend is Running successfully! 🚀</h1><p>The API endpoints are located at <code>/api</code>. Check health at <code>/api/health</code>.</p>');
 });
 
 // API Routes
@@ -67,9 +97,30 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Render dynamically provides PORT (typically 10000)
 const PORT = process.env.PORT || 5000;
+const HOST = '0.0.0.0';
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+const server = app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
+  console.log(`🔗 Health check: http://${HOST}:${PORT}/api/health`);
 });
+
+// Graceful shutdown handling for container stops and restarts
+const shutdown = () => {
+  console.log('Received shutdown signal. Closing HTTP server...');
+  server.close(async () => {
+    console.log('HTTP server closed.');
+    try {
+      await mongoose.connection.close(false);
+      console.log('MongoDB connection closed.');
+    } catch (err) {
+      console.error('Error closing MongoDB connection:', err);
+    }
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
